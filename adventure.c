@@ -55,8 +55,8 @@ createDirectory(int pid){
 
 struct room
 {
-	char *name;
-	char *type;
+	char name[20];
+	char type[20];
 	int connections[6];
 	int numConnections;
 };
@@ -81,6 +81,7 @@ void createRoomFile(struct room rooms[], struct room r, int roomNum){
 		fprintf(fpr, "%s\n", rooms[r.connections[i]].name);
 	}
 	fprintf(fpr, "ROOM TYPE: %s\n", r.type);
+	fclose(fpr);
 	return;
 }
 
@@ -96,17 +97,18 @@ void readRoomFile(int roomNum, struct room* r){
 		perror("Error while opening file");
 		exit(1);
 	}
-	if (fgets (buffer , 50 , fpr) == NULL){
+	
+	if (fgets(buffer , 50 , fpr) == NULL){
 		perror("fgets error");
 		exit(1);
 	}
+	fclose(fpr);
 
-	printf("buffer= [%s]\n", buffer);
 	strcpy(r->name, buffer + 11); //skip "ROOM_NAME: " (11 chars)
 	char* newline;
 	newline = strchr(r->name, '\n');
 	*newline = '\0'; //replace newline with null char
-	
+	//printf("r->name [%s]\n", r->name);
 
 }
 
@@ -119,13 +121,13 @@ int main(void){
 	//randomly pick 7 of the 10 rooms
 	int i, j, randNum;
 	for (i=0; i<NUM_ROOMS; i++){
-		rooms[i].name = randName(roomNames, NUM_ROOM_NAMES - i);
-		rooms[i].type = "MID_ROOM";
+		strcpy(rooms[i].name, randName(roomNames, NUM_ROOM_NAMES - i));
+		strcpy(rooms[i].type, "MID_ROOM");
 	}
 		
 	//pick at random one room to be the start
 	randNum = rand() % NUM_ROOMS;
-	rooms[randNum].type = "START_ROOM";
+	strcpy(rooms[randNum].type,"START_ROOM");
 	//swap chosen start_room with last element in array rooms[]
 	struct room temp;
 	temp = rooms[randNum];
@@ -134,7 +136,7 @@ int main(void){
 	
 	//pick at random a different room to be the end
 	randNum = rand() %  (NUM_ROOMS - 1);
-	rooms[randNum].type = "END_ROOM";
+	strcpy(rooms[randNum].type, "END_ROOM");
 	
 	//the 5 remaining rooms stay mid_rooms
 		
@@ -206,6 +208,7 @@ int main(void){
 	printf("****************************************\n");
 
 	int stepCount = 0;
+	struct room path[7];
 	
 	//start at START_ROOM
 	
