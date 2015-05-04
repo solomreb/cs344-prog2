@@ -175,13 +175,19 @@ void readRoomConnections(int roomNum, struct room* r){
 
 
 int main(void){
-	//srand(time(NULL)); //initialize random number generator
+	srand(time(NULL)); //initialize random number generator
 
 //generate cave in memory
 	char *roomNames[] = {"Scarlet", "PEACOCK", "plum", "MUSTARD", "white", "PEACH", "Lavender", "rOSE", "ButleR", "Clue"};
+		int path[7];
+	int next_room, i, j, k, done, randNum, numConnections, numUnusedRooms, neighbor, pid, stepCount;
+	char destination[50];
+	char *newline;
+	struct room temp;
+
+
 
 	//randomly pick 7 of the 10 rooms. initialize names and default to MID_ROOM room type
-	int i, j, randNum;
 	for (i=0; i<NUM_ROOMS; i++){
 		strcpy(rooms[i].name, randName(roomNames, NUM_ROOM_NAMES - i));
 		strcpy(rooms[i].type, "MID_ROOM");
@@ -191,7 +197,6 @@ int main(void){
 	randNum = rand() % NUM_ROOMS;
 	strcpy(rooms[randNum].type,"START_ROOM");
 	//swap chosen start_room with last element in array rooms[]
-	struct room temp;
 	temp = rooms[randNum];
 	rooms[randNum] = rooms[NUM_ROOMS - 1];
 	rooms[NUM_ROOMS - 1] = temp;
@@ -204,7 +209,7 @@ int main(void){
 	//for each room,
 	for (i=0; i<7; i++){
 		int unusedRoomNumbers[7];
-		int numUnusedRooms = 0;
+		numUnusedRooms = 0;
 		//fill unusedRoomNumbers with 0 through 6 excluding i
 		for (j=0; j < NUM_ROOMS; j++){
             if (j != i) {
@@ -214,7 +219,7 @@ int main(void){
         }
 		
 		//numConnections = random number between 3 and 6 inclusive
-		int numConnections = (rand() % 4) + 3;
+		numConnections = (rand() % 4) + 3;
 		rooms[i].numConnections = numConnections;
 		
 		//randomly generate numConnections connections chosen from unusedRoomNumbers[]
@@ -225,13 +230,11 @@ int main(void){
 			numUnusedRooms--;	
 		}
 	}
-		
-	int k;
-	int done = 0;
+	done = 0;
 	for (i=0; i<NUM_ROOMS; i++){
 	//for each connection, make sure it goes both ways
 		for (j=0; j<rooms[i].numConnections; j++){
-			int neighbor= rooms[i].connections[j];
+			neighbor = rooms[i].connections[j];
 			//check if one of neighbor's connections is i
 			for (k=0; k< rooms[neighbor].numConnections;k++){
 				if (rooms[neighbor].connections[k] == i){
@@ -249,7 +252,7 @@ int main(void){
 //write out rooms to files
 	
 	//create directory solomreb.rooms.<processid>
-	int pid = getpid();	
+	pid = getpid();	
 	createDirectory(pid);
 	
 	//create new files for each room
@@ -268,18 +271,12 @@ int main(void){
 		readRoomConnections(i+1,&rooms[i]);
 	}
 	
-	//play the game
+//play the game
 	printf("\n****************************************\n");
 	printf("Welcome to the Becky's Cave Adventure!\n");
 	printf("****************************************\n\n");
 
-	
-	int path[7];
-	int next_room;
-	char destination[50];
-	char *newline;
-	
-	int stepCount = 0;
+	stepCount = 0;
 	for(;;){
 		printf("CURRENT LOCATION: %s\n", rooms[cur_room].name);
 		printf("POSSIBLE CONNECTIONS: ");
@@ -292,16 +289,18 @@ int main(void){
 				printf(", ");
 			}
 		}
+		
+		//prompt for next room
 		printf("WHERE TO? >");
 		fflush(stdout);
 		if(fgets(destination, 50, stdin) == NULL){
 			printf("\n");
 			exit (0);
 		}
-		
 		newline = strchr(destination, '\n');
-		*newline = '\0'; //replace newline with null char
+		*newline = '\0'; //strip newline from string
 		printf("\n");
+		
 		//check for valid input
 		next_room = findRoom(destination);
 		
@@ -323,5 +322,5 @@ int main(void){
 				exit(0);			
 			}
 		}	
-	}		
+	}	
 }
