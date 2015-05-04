@@ -13,7 +13,6 @@ Becky Solomon
 
 const int NUM_ROOMS = 7;
 const int NUM_ROOM_NAMES = 10;
-int cur_room, end_room;
 
 //swaps anArray element at index A with element at index B
 void swapStringElements(char *anArray[], int A, int B){
@@ -63,17 +62,6 @@ struct room
 };
 struct room rooms[7]; //an array of 7 rooms 
 
-void printRoom(char* msg, struct room *r){
-	printf(msg);
-	printf("Name: %s\n", r->name);
-	printf("Type: %s\n", r->type);
-	printf("NumConnections: %d\n", r->numConnections);
-	int i;
-	for (i=0; i<r->numConnections; i++){
-		printf("Connections[%d]: %d\n", i, r->connections[i]);
-	}
-}
-
 //create a new file for a room
 void createRoomFile(struct room rooms[], struct room r, int roomNum){
 	FILE *fpr;
@@ -97,18 +85,7 @@ void createRoomFile(struct room rooms[], struct room r, int roomNum){
 	return;
 }
 
-//given name, return index of that room in array rooms[]
-int findRoom(char* name){
-	int i;
-	for (i=0; i<7; i++){
-		if (strcmp(name, rooms[i].name) == 0){
-			return i;		
-		}
-	}
-	return -1;	
-}
-
-void readRoomNameType(int roomNum, struct room* r){
+void readRoomFile(int roomNum, struct room* r){
 	FILE *fpr;
 	int i;
 	char roomName[2];
@@ -117,6 +94,7 @@ void readRoomNameType(int roomNum, struct room* r){
 	int connection=0;
 	
 	sprintf(roomName, "%d", roomNum);
+	printf("Opening file %s\n", roomName);
 	fpr = fopen(roomName, "r");
 		if (fpr == NULL){
 		perror("Error while opening file");
@@ -130,64 +108,45 @@ void readRoomNameType(int roomNum, struct room* r){
 			strcpy(r->name, buffer + 11); //skip "ROOM_NAME: " (11 chars)
 			newline = strchr(r->name, '\n');
 			*newline = '\0'; //replace newline with null char
+			printf("r->name [%s]\n", r->name);
 		}
 		else if (strncmp(buffer,"ROOM TYPE",9) == 0){
 			//read room type
 			strcpy(r->type, buffer + 11); //skip "ROOM_TYPE: " (11 chars)
 			newline = strchr(r->type, '\n');
 			*newline = '\0'; //replace newline with null char
+			printf("r->type [%s]\n", r->type);
 		}
-
-	}
-	fclose(fpr);
-
-}
-
-void readRoomConnections(int roomNum, struct room* r){
-	FILE *fpr;
-	int i;
-	char roomName[2];
-	char buffer[50];
-	char* newline;
-	int connection=0;
-	
-	sprintf(roomName, "%d", roomNum);
-	fpr = fopen(roomName, "r");
-		if (fpr == NULL){
-		perror("Error while opening file");
-		exit(1);
-		}
-	
-	while (fgets(buffer , 50 , fpr) != NULL){
-		if (strncmp(buffer,"CONNECTION",9) == 0){
+		else if (strncmp(buffer,"CONNECTION",9) == 0){
 			//read connections
-			char connectionName[50];
-			strcpy(connectionName, buffer + 14); //skip "CONNECTION #: " (14 chars)
-			newline = strchr(connectionName, '\n');
+			strcpy(r->connections[connection], buffer + 14); //skip "CONNECTION #: " (14 chars)
+			newline = strchr(r->connetions[connection], '\n');
 			*newline = '\0'; //replace newline with null char
-			r->connections[connection] = findRoom(connectionName);
+			printf("r->connection [%s]\n", r->connections[connection]);
 			connection++;
+
 		}
-		
 	}
-	fclose(fpr);
+fclose(fpr);
+
 }
 
 
 int main(void){
-	//srand(time(NULL)); //initialize random number generator
+	srand(time(NULL)); //initialize random number generator
 
 //generate cave in memory
 	char *roomNames[] = {"Scarlet", "PEACOCK", "plum", "MUSTARD", "white", "PEACH", "Lavender", "rOSE", "ButleR", "Clue"};
-
-	//randomly pick 7 of the 10 rooms. initialize names and default to MID_ROOM room type
+	//copy roomnames into new array that won't change
+	
+	//randomly pick 7 of the 10 rooms
 	int i, j, randNum;
 	for (i=0; i<NUM_ROOMS; i++){
 		strcpy(rooms[i].name, randName(roomNames, NUM_ROOM_NAMES - i));
 		strcpy(rooms[i].type, "MID_ROOM");
 	}
 		
-	//pick at random one room to be the START_ROOM
+	//pick at random one room to be the start
 	randNum = rand() % NUM_ROOMS;
 	strcpy(rooms[randNum].type,"START_ROOM");
 	//swap chosen start_room with last element in array rooms[]
@@ -196,22 +155,25 @@ int main(void){
 	rooms[randNum] = rooms[NUM_ROOMS - 1];
 	rooms[NUM_ROOMS - 1] = temp;
 	
-	//pick at random a different room to be the END_ROOM
+	//pick at random a different room to be the end
 	randNum = rand() %  (NUM_ROOMS - 1);
 	strcpy(rooms[randNum].type, "END_ROOM");
 	
+	//the 5 remaining rooms stay mid_rooms
 		
 	//for each room,
 	for (i=0; i<7; i++){
 		int unusedRoomNumbers[7];
-		int numUnusedRooms = 0;
+		int numUnusedRooms = 7;
 		//fill unusedRoomNumbers with 0 through 6 excluding i
-		for (j=0; j < NUM_ROOMS; j++){
-            if (j != i) {
-                unusedRoomNumbers[numUnusedRooms] = j;
-                numUnusedRooms++;
-            }
-        }
+		for (j=0; j<NUM_ROOMS; j++){
+			if (j < i){
+				unusedRoomNumbers[j] = j;
+			}
+			if (j > i){
+				unusedRoomNumbers[j] = j + 1;
+			}
+		}
 		
 		//numConnections = random number between 3 and 6 inclusive
 		int numConnections = (rand() % 4) + 3;
@@ -258,70 +220,18 @@ int main(void){
 	}
 	//read in rooms from files
 	for (i=0; i<NUM_ROOMS; i++){
-		readRoomNameType(i+1, &rooms[i]);
-		if (strcmp(rooms[i].type, "START_ROOM")== 0){
-			cur_room = i; 
-		}
-		if (strcmp(rooms[i].type, "END_ROOM")== 0){
-			end_room = i; 
-		}
-		readRoomConnections(i+1,&rooms[i]);
+		readRoomFile(i+1, &rooms[i]);
+		 
 	}
 	
 	//play the game
-	printf("\n****************************************\n");
 	printf("Welcome to the Becky's Cave Adventure!\n");
-	printf("****************************************\n\n");
+	printf("****************************************\n");
 
-	
-	int path[7];
-	int next_room;
-	char destination[50];
-	char *newline;
-	
 	int stepCount = 0;
-	for(;;){
-		printf("CURRENT LOCATION: %s\n", rooms[cur_room].name);
-		printf("POSSIBLE CONNECTIONS: ");
-		for (i=0; i<rooms[cur_room].numConnections; i++){
-			printf("%s",rooms[rooms[cur_room].connections[i]].name);
-			if (i == rooms[cur_room].numConnections - 1){
-				printf(".\n");
-			}
-			else{
-				printf(", ");
-			}
-		}
-		printf("WHERE TO? >");
-		fflush(stdout);
-		if(fgets(destination, 50, stdin) == NULL){
-			printf("\n");
-			exit (0);
-		}
+	struct room path[7];
+	
+	//start at START_ROOM
+	
 		
-		newline = strchr(destination, '\n');
-		*newline = '\0'; //replace newline with null char
-		printf("\n");
-		//check for valid input
-		next_room = findRoom(destination);
-		
-		if(next_room == -1){
-			printf("HUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
-		}
-		else{
-			cur_room = next_room;
-			path[stepCount] = cur_room;
-			stepCount++;
-			if (cur_room == end_room){
-				printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
-				printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", stepCount);
-				
-				for(i=0; i<stepCount; i++){
-					printf("%s\n", rooms[path[i]].name);
-					
-				}	
-				exit(0);			
-			}
-		}	
-	}		
 }
